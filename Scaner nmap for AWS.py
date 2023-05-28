@@ -9,60 +9,60 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import boto3
 
-# AWS SES configuration
-aws_access_key_id = 'YOUR_AWS_ACCESS_KEY_ID'
-aws_secret_access_key = 'YOUR_AWS_SECRET_ACCESS_KEY'
-aws_region = 'YOUR_AWS_REGION'
-ses_sender_email = 'SENDER_EMAIL@example.com'
-ses_recipient_email = 'RECIPIENT_EMAIL@example.com'
+# Конфігурація AWS SES
+aws_access_key_id = 'ВАШ_КЛЮЧ_ДОСТУПУ_AWS'
+aws_secret_access_key = 'ВАШ_СЕКРЕТНИЙ_КЛЮЧ_ДОСТУПУ_AWS'
+aws_region = 'ВАША_ОБЛАСТЬ_AWS'
+ses_sender_email = 'ВІДПРАВНИК_ЕЛЕКТРОННОЇ_ПОШТИ@example.com'
+ses_recipient_email = 'ОТРИМУВАЧ_ЕЛЕКТРОННОЇ_ПОШТИ@example.com'
 
-# Scan configuration
-server_addresses = ['IP_ADDRESS_1', 'IP_ADDRESS_2']  # List of IP addresses to scan
-nmap_args = '-O -oN nmap_report.txt'  # Nmap scan arguments
+# Конфігурація сканування
+server_addresses = ['IP_АДРЕСА_1', 'IP_АДРЕСА_2']  # Список IP-адрес для сканування
+nmap_args = '-O -oN nmap_report.txt'  # Аргументи сканування Nmap
 
-# SMTP server configuration
-smtp_server = 'YOUR_SMTP_SERVER'
-smtp_port = YOUR_SMTP_PORT
-smtp_sender_email = 'SENDER_EMAIL@example.com'
-smtp_sender_password = 'SENDER_EMAIL_PASSWORD'
-smtp_recipient_email = 'RECIPIENT_EMAIL@example.com'
-smtp_recipient_name = 'Recipient Name'
+# Конфігурація SMTP-сервера
+smtp_server = 'ВАШ_СМТП_СЕРВЕР'
+smtp_port = ВАШ_СМТП_ПОРТ
+smtp_sender_email = 'ВІДПРАВНИК_ЕЛЕКТРОННОЇ_ПОШТИ@example.com'
+smtp_sender_password = 'ПАРОЛЬ_ВІД_ВІДПРАВНИКА_ЕЛЕКТРОННОЇ_ПОШТИ'
+smtp_recipient_email = 'ОТРИМУВАЧ_ЕЛЕКТРОННОЇ_ПОШТИ@example.com'
+smtp_recipient_name = 'Ім\'я Отримувача'
 
 while True:
     try:
         for server_address in server_addresses:
-            # Perform Nmap scan
+            # Виконуємо сканування Nmap
             nm = nmap.PortScanner()
             nm.scan(hosts=server_address, arguments=nmap_args)
 
-            # Get previous scan results from file
+            # Отримуємо попередні результати сканування з файлу
             if os.path.exists('nmap_result.txt'):
                 with open('nmap_result.txt', 'r') as f:
                     old_result = f.read().splitlines()
             else:
                 old_result = []
 
-            # Get new scan results and save them to file
+            # Отримуємо нові результати сканування та зберігаємо їх в файл
             with open('nmap_report.txt', 'r') as f:
                 new_result = f.read().splitlines()
 
             with open('nmap_result.txt', 'w') as f:
                 f.write('\n'.join(new_result))
 
-            # Find critical changes
+            # Знаходимо критичні зміни
             critical_changes = set(new_result).difference(set(old_result))
 
-            # Check if there are critical changes
+            # Перевіряємо, чи є критичні зміни
             if critical_changes:
-                message = f'Warning, {smtp_recipient_name}!\n\n'
-                message += 'Critical changes:\n\n'
+                message = f'Увага, {smtp_recipient_name}!\n\n'
+                message += 'Критичні зміни:\n\n'
                 message += '\n'.join(critical_changes)
-                message += '\n\nOld result:\n\n'
+                message += '\n\nПопередні результати:\n\n'
                 message += '\n'.join(old_result)
-                message += '\n\nNew result:\n\n'
+                message += '\n\nНові результати:\n\n'
                 message += '\n'.join(new_result)
 
-                # Send email using AWS SES
+                # Надсилаємо електронну пошту за допомогою AWS SES
                 ses_client = boto3.client(
                     'ses',
                     region_name=aws_region,
@@ -77,13 +77,13 @@ while True:
                         'Data': message
                     }
                 )
-                print('Email sent successfully via AWS SES.')
+                print('Електронна пошта успішно відправлена через AWS SES.')
 
             else:
-                print("Scan results have not changed")
+                print("Результати сканування не змінилися")
 
-        # Delay before the next scan
+        # Затримка перед наступним скануванням у секундах
         time.sleep(60)
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"Сталася помилка: {e}")
