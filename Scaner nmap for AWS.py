@@ -4,7 +4,6 @@ import nmap
 import difflib
 import smtplib
 import os
-import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import boto3
@@ -20,70 +19,58 @@ ses_recipient_email = 'ОТРИМУВАЧ_ЕЛЕКТРОННОЇ_ПОШТИ@exam
 server_addresses = ['IP_АДРЕСА_1', 'IP_АДРЕСА_2']  # Список IP-адрес для сканування
 nmap_args = '-O -oN nmap_report.txt'  # Аргументи сканування Nmap
 
-# Конфігурація SMTP-сервера
-smtp_server = 'ВАШ_СМТП_СЕРВЕР'
-smtp_port = ВАШ_СМТП_ПОРТ
-smtp_sender_email = 'ВІДПРАВНИК_ЕЛЕКТРОННОЇ_ПОШТИ@example.com'
-smtp_sender_password = 'ПАРОЛЬ_ВІД_ВІДПРАВНИКА_ЕЛЕКТРОННОЇ_ПОШТИ'
-smtp_recipient_email = 'ОТРИМУВАЧ_ЕЛЕКТРОННОЇ_ПОШТИ@example.com'
-smtp_recipient_name = 'Ім\'я Отримувача'
+try:
+    for server_address in server_addresses:
+        # Виконуємо сканування Nmap
+        nm = nmap.PortScanner()
+        nm.scan(hosts=server_address, arguments=nmap_args)
 
-while True:
-    try:
-        for server_address in server_addresses:
-            # Виконуємо сканування Nmap
-            nm = nmap.PortScanner()
-            nm.scan(hosts=server_address, arguments=nmap_args)
+        # Отримуємо попередні результати сканування з файлу
+        if os.path.exists('nmap_result.txt'):
+            with open('nmap_result.txt', 'r') as f:
+                old_result = f.read().splitlines()
+        else:
+            old_result = []
 
-            # Отримуємо попередні результати сканування з файлу
-            if os.path.exists('nmap_result.txt'):
-                with open('nmap_result.txt', 'r') as f:
-                    old_result = f.read().splitlines()
-            else:
-                old_result = []
+        # Отримуємо нові результати сканування та зберігаємо їх в файл
+        with open('nmap_report.txt', 'r') as f:
+            new_result = f.read().splitlines()
 
-            # Отримуємо нові результати сканування та зберігаємо їх в файл
-            with open('nmap_report.txt', 'r') as f:
-                new_result = f.read().splitlines()
+        with open('nmap_result.txt', 'w') as f:
+            f.write('\n'.join(new_result))
 
-            with open('nmap_result.txt', 'w') as f:
-                f.write('\n'.join(new_result))
+        # Знаходимо критичні зміни
+        critical_changes = set(new_result).difference(set(old_result))
 
-            # Знаходимо критичні зміни
-            critical_changes = set(new_result).difference(set(old_result))
+        # Перевіряємо, чи є критичні зміни
+        if critical_changes:
+            message = f'Увага, {smtp_recipient_name}!\n\n'
+            message += 'Критичні зміни:\n\n'
+            message += '\n'.join(critical_changes)
+            message += '\n\nПопередні результати:\n\n'
+            message += '\n'.join(old_result)
+            message += '\n\nНові результати:\n\n'
+            message += '\n'.join(new_result)
 
-            # Перевіряємо, чи є критичні зміни
-            if critical_changes:
-                message = f'Увага, {smtp_recipient_name}!\n\n'
-                message += 'Критичні зміни:\n\n'
-                message += '\n'.join(critical_changes)
-                message += '\n\nПопередні результати:\n\n'
-                message += '\n'.join(old_result)
-                message += '\n\nНові результати:\n\n'
-                message += '\n'.join(new_result)
+            # Надсилаємо електронну пошту за допомогою AWS SES
+            ses_client = boto3.client(
+                'ses',
+                region_name=aws_region,
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key
+            )
 
-                # Надсилаємо електронну пошту за допомогою AWS SES
-                ses_client = boto3.client(
-                    'ses',
-                    region_name=aws_region,
-                    aws_access_key_id=aws_access_key_id,
-                    aws_secret_access_key=aws_secret_access_key
-                )
+            response = ses_client.send_raw_email(
+                Source=ses_sender_email,
+                Destinations=[ses_recipient_email],
+                RawMessage={
+                    'Data': message
+                }
+            )
+            print('Електронна пошта успішно відправлена через AWS SES.')
 
-                response = ses_client.send_raw_email(
-                    Source=ses_sender_email,
-                    Destinations=[ses_recipient_email],
-                    RawMessage={
-                        'Data': message
-                    }
-                )
-                print('Електронна пошта успішно відправлена через AWS SES.')
+        else:
+            print("Результати сканування не змінилися")
 
-            else:
-                print("Результати сканування не змінилися")
-
-        # Затримка перед наступним скануванням у секундах
-        time.sleep(60)
-
-    except Exception as e:
-        print(f"Сталася помилка: {e}")
+except Exception as e:
+    print(f"Сталася помилка: {e}")
