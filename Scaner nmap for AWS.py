@@ -6,14 +6,6 @@ import smtplib
 import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import boto3
-
-# Конфігурація AWS SES
-aws_access_key_id = 'ВАШ_КЛЮЧ_ДОСТУПУ_AWS'
-aws_secret_access_key = 'ВАШ_СЕКРЕТНИЙ_КЛЮЧ_ДОСТУПУ_AWS'
-aws_region = 'ВАША_ОБЛАСТЬ_AWS'
-ses_sender_email = 'ВІДПРАВНИК_ЕЛЕКТРОННОЇ_ПОШТИ@example.com'
-ses_recipient_email = 'ОТРИМУВАЧ_ЕЛЕКТРОННОЇ_ПОШТИ@example.com'
 
 # Конфігурація сканування
 server_addresses = ['IP_АДРЕСА_1', 'IP_АДРЕСА_2']  # Список IP-адрес для сканування
@@ -44,7 +36,7 @@ try:
 
         # Перевіряємо, чи є критичні зміни
         if critical_changes:
-            message = f'Увага, {smtp_recipient_name}!\n\n'
+            message = f'Увага!\n\n'
             message += 'Критичні зміни:\n\n'
             message += '\n'.join(critical_changes)
             message += '\n\nПопередні результати:\n\n'
@@ -52,23 +44,26 @@ try:
             message += '\n\nНові результати:\n\n'
             message += '\n'.join(new_result)
 
-            # Надсилаємо електронну пошту за допомогою AWS SES
-            ses_client = boto3.client(
-                'ses',
-                region_name=aws_region,
-                aws_access_key_id=aws_access_key_id,
-                aws_secret_access_key=aws_secret_access_key
-            )
+            # Відправка електронної пошти за допомогою smtplib
+            HOST = "localhost"
+            SUBJECT = "Критичні зміни в результаті сканування"
+            TO = "vasyl.haliuk@h-x.technology"
+            FROM = "vasyl.haliuk@h-x.technology"
+            text = message
 
-            response = ses_client.send_raw_email(
-                Source=ses_sender_email,
-                Destinations=[ses_recipient_email],
-                RawMessage={
-                    'Data': message
-                }
-            )
-            print('Електронна пошта успішно відправлена через AWS SES.')
+            BODY = "\r\n".join((
+                "From: %s" % FROM,
+                "To: %s" % TO,
+                "Subject: %s" % SUBJECT,
+                "",
+                text
+            ))
 
+            server = smtplib.SMTP(HOST)
+            server.sendmail(FROM, [TO], BODY)
+            server.quit()
+
+            print('Електронний лист успішно відправлений через smtplib.')
         else:
             print("Результати сканування не змінилися")
 
