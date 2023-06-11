@@ -56,7 +56,7 @@ try:
                 "To: %s" % TO,
                 "Subject: %s" % SUBJECT,
                 "",
-                text
+                text.encode('utf-8')
             ))
 
             server = smtplib.SMTP(HOST)
